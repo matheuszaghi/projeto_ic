@@ -2,3 +2,6 @@
 
 # Pycharm configuration files.
 .idea/*
+
+# Python files
+*.pyc
