@@ -21,6 +21,8 @@ def test_slicing():
     cubename = os.path.join(context.data_dir,
                             "ADP.2017-06-16T13:59:19.244.fits")
     cube = Cube(cubename, ext=1)
+    zdim, ydim, xdim = cube.shape
+    center = (ydim // 2, xdim // 2)
     newcube = cube.select_lambda(cube.wave.get_range()[0], 7000)
     newcubename = os.path.join(context.data_dir, "test_slice.fits")
     newcube.write(newcubename)
