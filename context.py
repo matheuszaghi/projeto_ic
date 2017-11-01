@@ -15,7 +15,5 @@ import getpass
 
 username = getpass.getuser()
 
-if username == "kadu":
-    home_dir = "/home/kadu/Dropbox/matheusic"
-    data_dir = os.path.join(home_dir, "data")
-
+home_dir = "/home/{}/Dropbox/matheusic".format(username)
+data_dir = os.path.join(home_dir, "data")
