@@ -17,7 +17,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpdaf.obj import Spectrum, WaveCoord
 
-from ppxf.ppxf import ppxf
+from ppxf import ppxf
+import ppxf_util as util
 
 import context
 
@@ -41,20 +42,79 @@ def test_ppxf():
     data = fits.getdata(filename, 1)
     header = fits.getheader(filename, 1)
     # Picking one spectrum
-    xpix = 180
-    ypix = 157
+    xpix = 1
+    ypix = 1
     specdata = data[:,ypix-1,xpix-1]
     # Wavelenght data
     wave = WaveCoord(cdelt=header["cd3_3"], crval=header["crval3"],
                      cunit= u.angstrom)
     wave1 = (np.arange(header["naxis3"])) * header["cd3_3"] + header["crval3"]
     spec = Spectrum(wave=wave, data=specdata)
-    ax = plt.subplot(111)
-    spec.plot()
-    ax.plot(wave1, specdata, "-")
-    plt.show()
+    #ax = plt.subplot(111)
+    #spec.plot()
+    #ax.plot(wave1, specdata, "-")
+    #plt.show()
     # print(header["naxis1"], header["naxis2"], header["naxis3"], header["naxis"])
     # zdim, ydim, xdim = data.shape
+    ####################
+
+    FWHM_gal = 4.2 ###CHUTE### VERIFICAR
+
+    galaxy, logwave1, velscale = util.log_rebin(wave1, specdata)
+    galaxy = galaxy/np.median(galaxy)  # Normalize spectrum to avoid numerical issues (??)
+
+    estrelas = os.path.join(context.data_dir, "/models/Mbi1.30Z*.fits")
+
+
+    FWHM_tem = 2.51 ###CHUTE### VERIFICAR
+
+
+    velscale_ratio = 2  # ????
+
+
+    #
+
+    hdu = fits.open(estrelas[0])
+    data2 = hdu[0].data
+    header2 = hdu[0].header
+    wave2 = h2['CRVAL1'] + np.array([0., h2['CDELT1']*(h2['NAXIS1'] - 1)])
+    data2New, logwave2, velscale_temp = util.log_rebin(wave2, data2, velscale=velscale/velscale_ratio)
+    templates = np.empty((sspNew.size, len(estrelas)))
+
+
+
+    FWHM_dif = np.sqrt(FWHM_gal**2 - FWHM_tem**2)     # NAO ENTENDI
+    sigma = FWHM_dif/2.355/h2['CDELT1']               # ESSA PARTE
+
+
+    # Ajusta o espectro dos templates e da galaxia para o mesmo comprimento
+    # de onda inicial
+
+    c = 299792.458
+    if velscale_ratio > 1:
+        dv = (np.mean(logwave2[:velscale_ratio]) - logwave1[0])*c  # km/s
+    else:
+        dv = (logwave2[0] - logwave1[0])*c  # km/s   
+
+
+    z = 0.03 # Redshift of the galaxy
+
+    # Exclude the emission lines of the gas
+    goodPixels = util.determine_goodpixels(logwave1, wave2, z)
+
+    vel = c*np.log(1 + z)
+    start = [vel, 10000.]   
+    t = clock()
+
+    pp = ppxf(templates, galaxy, noise, velscale, start,
+    	      goodpixels=goodPixels, plot=True, moments=4,
+    	      degree=4, vsyst=dv, velscale_ratio=velscale_ratio)
+
+    print("Formal errors:")
+    print("     dV    dsigma   dh3      dh4")
+    print("".join("%8.2g" % f for f in pp.error*np.sqrt(pp.chi2)))
+
+    print('Elapsed time in pPXF: %.2f s' % (clock() - t))
 
 if __name__ == "__main__":
     # test_image()
