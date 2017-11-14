@@ -15,9 +15,9 @@ import context
 def test_slicing():
     """ Test slicing of the cube with MPDAF. """
     cubename = os.path.join(context.data_dir,
-                            "ADP.2017-06-16T13_59_19.244.fits")
+                            "ADP.2017-06-16T13:59:19.244.fits")
 
-
+    print(os.path.exists(cubename))
     cube = Cube(cubename, ext=1)
 
     center = (7.02162, 229.186)
@@ -27,7 +27,7 @@ def test_slicing():
    
     cube = cube.subcube(center, 2, lbda)
 
-    newcubename = os.path.join(context.data_dir, "test_slice.fits")
+    newcubename = os.path.join(context.data_dir, "cube_10x10.fits")
     cube.write(newcubename)
     return
 

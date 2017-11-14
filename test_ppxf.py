@@ -7,20 +7,19 @@ Created on 09/10/2017
 
 Test imports and first pPXF run.
 """
+from __future__ import print_function, division
+
 import os
 
 from astropy.io import fits
-from astropy.coordinates import SkyCoord
-from astropy.wcs import WCS
-import astropy.units as u
 import numpy as np
 import matplotlib.pyplot as plt
-from mpdaf.obj import Spectrum, WaveCoord
 
 from ppxf import ppxf
-import ppxf_util as util
+import ppxf.ppxf_util as util
 
 import context
+from muse_resolution import get_muse_fwhm, broad2res
 
 def test_image():
     """ First test to import modules and read fits file. """
@@ -35,32 +34,27 @@ def test_image():
     plt.colorbar(im)
     plt.show()
 
-def test_ppxf():
-    """ Test loading data """
-    filename = os.path.join(context.data_dir, "test_slice.fits")
+def test_ppxf(filename):
+    """ Test pPXF run in a cube sampling the central part of the galaxy.  """
+
     # Loading data and header from cube
     data = fits.getdata(filename, 1)
     header = fits.getheader(filename, 1)
-    # Picking one spectrum
+    # Picking one spectrum for this test
     xpix = 1
     ypix = 1
     specdata = data[:,ypix-1,xpix-1]
     # Wavelenght data
-    wave = WaveCoord(cdelt=header["cd3_3"], crval=header["crval3"],
-                     cunit= u.angstrom)
-    wave1 = (np.arange(header["naxis3"])) * header["cd3_3"] + header["crval3"]
-    spec = Spectrum(wave=wave, data=specdata)
-    #ax = plt.subplot(111)
-    #spec.plot()
-    #ax.plot(wave1, specdata, "-")
-    #plt.show()
-    # print(header["naxis1"], header["naxis2"], header["naxis3"], header["naxis"])
-    # zdim, ydim, xdim = data.shape
-    ####################
-
-    FWHM_gal = 4.2 ###CHUTE### VERIFICAR
-
-    galaxy, logwave1, velscale = util.log_rebin(wave1, specdata)
+    wave = (np.arange(header["naxis3"])) * header["cd3_3"] + header["crval3"]
+    # Before rebin to log-scale, it is necessary to homogeneize the
+    # MUSE spectrum to the same FWHM
+    f = get_muse_fwhm()
+    fwhm_data = f(wave)
+    fwhm_max = fwhm_data.max()
+    print("Broadening spectra to homogeneize FHWM to {}".format(fwhm_max))
+    spec = broad2res(wave, specdata, fwhm_data, fwhm_max) # Broad to 2.9 AA
+    # Rebin the data to logarithm scale
+    galaxy, logwave1, velscale = util.log_rebin([wave[0], wave[-1]], specdata)
     galaxy = galaxy/np.median(galaxy)  # Normalize spectrum to avoid numerical issues (??)
 
     estrelas = os.path.join(context.data_dir, "/models/Mbi1.30Z*.fits")
@@ -118,4 +112,5 @@ def test_ppxf():
 
 if __name__ == "__main__":
     # test_image()
-    test_ppxf()
+    filename = os.path.join(context.data_dir, "cube_10x10.fits")
+    test_ppxf(filename)
