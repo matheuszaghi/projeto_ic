@@ -11,11 +11,13 @@ from __future__ import print_function, division
 
 import os
 
+
+import glob
 from astropy.io import fits
 import numpy as np
 import matplotlib.pyplot as plt
 
-from ppxf import ppxf
+import ppxf
 import ppxf.ppxf_util as util
 
 import context
@@ -51,35 +53,35 @@ def test_ppxf(filename):
     f = get_muse_fwhm()
     fwhm_data = f(wave)
     fwhm_max = fwhm_data.max()
-    print("Broadening spectra to homogeneize FHWM to {}".format(fwhm_max))
+    print ("Broadening spectra to homogeneize FHWM to {}".format(fwhm_max))
     spec = broad2res(wave, specdata, fwhm_data, fwhm_max) # Broad to 2.9 AA
     # Rebin the data to logarithm scale
     galaxy, logwave1, velscale = util.log_rebin([wave[0], wave[-1]], specdata)
     galaxy = galaxy/np.median(galaxy)  # Normalize spectrum to avoid numerical issues (??)
 
-    estrelas = os.path.join(context.data_dir, "/models/Mbi1.30Z*.fits")
+    file_dir = os.path.dirname(os.path.realpath(__file__))  # path of this procedure
 
 
-    FWHM_tem = 2.51 ###CHUTE### VERIFICAR
+    estrelas = glob.glob(file_dir + '/projeto_ic/models/Mbi1.30Z*.fits')
 
-
-    velscale_ratio = 2  # ????
-
-
-    #
 
     hdu = fits.open(estrelas[0])
     data2 = hdu[0].data
     header2 = hdu[0].header
-    wave2 = h2['CRVAL1'] + np.array([0., h2['CDELT1']*(h2['NAXIS1'] - 1)])
+    wave2 = header2['CRVAL1'] + np.array([0., header2['CDELT1']*(header2['NAXIS1'] - 1)])
+
+
+    fwhm_data2 = broad2res(wave2, estrelas, 2.51)
+
     data2New, logwave2, velscale_temp = util.log_rebin(wave2, data2, velscale=velscale/velscale_ratio)
-    templates = np.empty((sspNew.size, len(estrelas)))
+    templates = np.empty((data2New.size, len(estrelas)))
 
 
 
-    FWHM_dif = np.sqrt(FWHM_gal**2 - FWHM_tem**2)     # NAO ENTENDI
-    sigma = FWHM_dif/2.355/h2['CDELT1']               # ESSA PARTE
 
+
+    #FWHM_dif = np.sqrt(fwhm_max**2 - FWHM_tem**2)     # NAO ENTENDI
+    #sigma = FWHM_dif/2.355/header2['CDELT1']          # ESSA PARTE
 
     # Ajusta o espectro dos templates e da galaxia para o mesmo comprimento
     # de onda inicial
