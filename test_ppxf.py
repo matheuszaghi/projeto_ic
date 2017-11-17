@@ -52,45 +52,32 @@ def test_ppxf(filename):
     # MUSE spectrum to the same FWHM
     f = get_muse_fwhm()
     fwhm_data = f(wave)
-    fwhm_max = fwhm_data.max()
+    fwhm_max = fwhm_data.max() + 0.01
     print ("Broadening spectra to homogeneize FHWM to {}".format(fwhm_max))
-    spec = broad2res(wave, specdata, fwhm_data, fwhm_max) # Broad to 2.9 AA
+    specdata = broad2res(wave, specdata, fwhm_data, fwhm_max)[0] # Broad to 2.91 AA
     # Rebin the data to logarithm scale
-    galaxy, logwave1, velscale = util.log_rebin([wave[0], wave[-1]], specdata)
+    velscale = 30.
+    galaxy, logwave1, velscale = util.log_rebin([wave[0], wave[-1]], specdata, velscale=velscale)
     galaxy = galaxy/np.median(galaxy)  # Normalize spectrum to avoid numerical issues (??)
 
     file_dir = os.path.dirname(os.path.realpath(__file__))  # path of this procedure
 
 
-    estrelas = glob.glob(file_dir + '/projeto_ic/models/Mbi1.30Z*.fits')
+    ssps = glob.glob(file_dir + '/projeto_ic/models/Mbi1.30Z*.fits')
 
-
-    hdu = fits.open(estrelas[0])
-    data2 = hdu[0].data
-    header2 = hdu[0].header
-    wave2 = header2['CRVAL1'] + np.array([0., header2['CDELT1']*(header2['NAXIS1'] - 1)])
-
-
-    fwhm_data2 = broad2res(wave2, estrelas, 2.51)
-
-    data2New, logwave2, velscale_temp = util.log_rebin(wave2, data2, velscale=velscale/velscale_ratio)
-    templates = np.empty((data2New.size, len(estrelas)))
-
-
-
-
-
-    #FWHM_dif = np.sqrt(fwhm_max**2 - FWHM_tem**2)     # NAO ENTENDI
-    #sigma = FWHM_dif/2.355/header2['CDELT1']          # ESSA PARTE
-
-    # Ajusta o espectro dos templates e da galaxia para o mesmo comprimento
-    # de onda inicial
+    ntemp = len(ssps)
+    templates = np.zeros((logwave1, ntemp))
+    header = fits.getheader(ssps[0], 0)
+    wave2 = header['CRVAL1'] + np.array([0., header['CDELT1'] * (header['NAXIS1'] - 1)])
+    for i, ssp in enumerate(ssps):
+        data = fits.getdata(ssps, 0)
+        newssp = broad2res(wave2, data, 2.51, fwhm_max)[0]
+        newssp, logwave2, velscale = util.log_rebin([wave2[0], wave2[-1]],
+                                                    newssp, velscale=velscale)
+        templates[i] = newssp / np.median(newssp)
 
     c = 299792.458
-    if velscale_ratio > 1:
-        dv = (np.mean(logwave2[:velscale_ratio]) - logwave1[0])*c  # km/s
-    else:
-        dv = (logwave2[0] - logwave1[0])*c  # km/s   
+    dv = (logwave2[0] - logwave1[0])*c  # km/s
 
 
     z = 0.03 # Redshift of the galaxy
@@ -99,18 +86,15 @@ def test_ppxf(filename):
     goodPixels = util.determine_goodpixels(logwave1, wave2, z)
 
     vel = c*np.log(1 + z)
-    start = [vel, 10000.]   
-    t = clock()
-
+    start = [vel, 10000., 0., 0.]
+    noise = np.ones_like(galaxy)
     pp = ppxf(templates, galaxy, noise, velscale, start,
     	      goodpixels=goodPixels, plot=True, moments=4,
-    	      degree=4, vsyst=dv, velscale_ratio=velscale_ratio)
-
+    	      degree=4, vsyst=dv)
     print("Formal errors:")
     print("     dV    dsigma   dh3      dh4")
     print("".join("%8.2g" % f for f in pp.error*np.sqrt(pp.chi2)))
-
-    print('Elapsed time in pPXF: %.2f s' % (clock() - t))
+    plt.show()
 
 if __name__ == "__main__":
     # test_image()

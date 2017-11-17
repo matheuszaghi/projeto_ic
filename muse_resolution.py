@@ -72,11 +72,12 @@ def plot_muse_fwhm():
     f = get_muse_fwhm()
     wave = np.linspace(4000, 10000, 1000)
     import matplotlib.pyplot as plt
+    plt.style.use("seaborn-paper")
     plt.figure(1)
     plt.minorticks_on()
     plt.plot(wave, f(wave), "-")
-    plt.xlabel("Wavelength (Angstrom)")
-    plt.ylabel("Spectral resolution FWHM (Angstrom)")
+    plt.xlabel("$\lambda$ ($\AA$)")
+    plt.ylabel(r"Spectral resolution $\alpha$ FWHM (Angstrom)")
     plt.show()
 
 if __name__ == "__main__":
