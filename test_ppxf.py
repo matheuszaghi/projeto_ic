@@ -64,7 +64,9 @@ def test_ppxf(filename):
 
 
     ssps = glob.glob(file_dir + '/projeto_ic/models/Mbi1.30Z*.fits')
+    
 
+    logwave1 = len(logwave1)
     ntemp = len(ssps)
     templates = np.zeros((len(logwave1), ntemp))
     header = fits.getheader(ssps[0], 0)
