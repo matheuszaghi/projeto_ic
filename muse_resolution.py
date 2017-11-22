@@ -57,6 +57,8 @@ def broad2res(w, specs, obsres, res=2.95):
     specs = np.atleast_2d(specs)
     dw = np.diff(w)[0]
     sigma_diff = np.sqrt(res**2 - obsres**2) / 2.3548 / dw
+    if isinstance(sigma_diff, float):
+        sigma_diff = np.repeat(sigma_diff, len(w))
     broad = np.zeros_like(specs)
     print "Processing broadening"
     for i,spec in enumerate(specs):

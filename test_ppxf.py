@@ -17,7 +17,7 @@ from astropy.io import fits
 import numpy as np
 import matplotlib.pyplot as plt
 
-import ppxf
+from ppxf.ppxf import ppxf
 import ppxf.ppxf_util as util
 
 import context
@@ -36,7 +36,7 @@ def test_image():
     plt.colorbar(im)
     plt.show()
 
-def test_ppxf(filename):
+def test_ppxf(filename, test=True):
     """ Test pPXF run in a cube sampling the central part of the galaxy.  """
 
     # Loading data and header from cube
@@ -62,21 +62,23 @@ def test_ppxf(filename):
 
     file_dir = os.path.dirname(os.path.realpath(__file__))  # path of this procedure
 
-
-    ssps = glob.glob(file_dir + '/projeto_ic/models/Mbi1.30Z*.fits')
-    
-
-    logwave1 = len(logwave1)
+    ssps = glob.glob(os.path.join(file_dir, "ppxf/miles_models/Mun*.fits"))
+    # ssps = glob.glob(file_dir + '/projeto_ic/models/Mbi1.30Z*.fits')
+    if test:
+        ssps = ssps[:10]
     ntemp = len(ssps)
-    templates = np.zeros((len(logwave1), ntemp))
+    # templates = np.zeros((ntemp, len(logwave1)))
     header = fits.getheader(ssps[0], 0)
-    wave2 = header['CRVAL1'] + np.array([0., header['CDELT1'] * (header['NAXIS1'] - 1)])
+    wave2 = header['CRVAL1'] + np.arange(header['NAXIS1']) * header['CDELT1']
     for i, ssp in enumerate(ssps):
+        print("Template {} / {}".format(i+1, ntemp))
         data = fits.getdata(ssp, 0)
         newssp = broad2res(wave2, data, 2.51, fwhm_max)[0]
         newssp, logwave2, velscale = util.log_rebin([wave2[0], wave2[-1]],
                                                     newssp, velscale=velscale)
-        templates[i] = newssp / np.median(newssp)
+        if i == 0:
+            templates = np.zeros((len(logwave2), ntemp))
+        templates[:,i] = newssp / np.median(newssp)
 
     c = 299792.458
     dv = (logwave2[0] - logwave1[0])*c  # km/s
@@ -85,20 +87,21 @@ def test_ppxf(filename):
     z = 0.03 # Redshift of the galaxy
 
     # Exclude the emission lines of the gas
-    goodPixels = util.determine_goodpixels(logwave1, wave2, z)
-
+    # goodPixels = util.determine_goodpixels(logwave1, wave2, z)
+    goodPixels = np.ones_like(galaxy)
     vel = c*np.log(1 + z)
-    start = [vel, 10000., 0., 0.]
+    start = [vel, 100., 0., 0.]
     noise = np.ones_like(galaxy)
     pp = ppxf(templates, galaxy, noise, velscale, start,
-    	      goodpixels=goodPixels, plot=True, moments=4,
-    	      degree=4, vsyst=dv)
-    print("Formal errors:")
-    print("     dV    dsigma   dh3      dh4")
-    print("".join("%8.2g" % f for f in pp.error*np.sqrt(pp.chi2)))
+    	      goodpixels=None, plot=True, moments=4,
+    	      degree=6, vsyst=dv)
+    # print("Formal errors:")
+    # print("     dV    dsigma   dh3      dh4")
+    # print("".join("%8.2g" % f for f in pp.error*np.sqrt(pp.chi2)))
     plt.show()
 
 if __name__ == "__main__":
     # test_image()
+    velscale = 30.
     filename = os.path.join(context.data_dir, "cube_10x10.fits")
     test_ppxf(filename)
