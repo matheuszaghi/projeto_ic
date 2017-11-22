@@ -66,11 +66,11 @@ def test_ppxf(filename):
     ssps = glob.glob(file_dir + '/projeto_ic/models/Mbi1.30Z*.fits')
 
     ntemp = len(ssps)
-    templates = np.zeros((logwave1, ntemp))
+    templates = np.zeros((len(logwave1), ntemp))
     header = fits.getheader(ssps[0], 0)
     wave2 = header['CRVAL1'] + np.array([0., header['CDELT1'] * (header['NAXIS1'] - 1)])
     for i, ssp in enumerate(ssps):
-        data = fits.getdata(ssps, 0)
+        data = fits.getdata(ssp, 0)
         newssp = broad2res(wave2, data, 2.51, fwhm_max)[0]
         newssp, logwave2, velscale = util.log_rebin([wave2[0], wave2[-1]],
                                                     newssp, velscale=velscale)
