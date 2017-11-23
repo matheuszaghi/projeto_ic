@@ -37,7 +37,7 @@ def test_image():
     plt.colorbar(im)
     plt.show()
 
-def test_ppxf(filename, test=True):
+def test_ppxf(filename):
     """ Test pPXF run in a cube sampling the central part of the galaxy.  """
 
     # Loading data and header from cube
@@ -60,38 +60,43 @@ def test_ppxf(filename, test=True):
     velscale = 30.
     galaxy, logwave1, velscale = util.log_rebin([wave[0], wave[-1]], specdata, velscale=velscale)
     galaxy = galaxy/np.median(galaxy)  # Normalize spectrum to avoid numerical issues (??)
-
+    # Preparing templates: TODO: make this part a function outside of the fitting routine
+    # Start checking if file exists and other conditions
+    redo = False
     file_dir = os.path.dirname(os.path.realpath(__file__))  # path of this procedure
-
-    # ssps = glob.glob(os.path.join(file_dir, "ppxf/miles_models/Mun*.fits"))
-    ssps = glob.glob(os.path.join(file_dir, "models/Mbi1.30Z*.fits"))
-    if test:
-        ssps = ssps[:10]
-    ntemp = len(ssps)
-    # templates = np.zeros((ntemp, len(logwave1)))
-    header = fits.getheader(ssps[0], 0)
-    wave2 = header['CRVAL1'] + np.arange(header['NAXIS1']) * header['CDELT1']
-    for i, ssp in enumerate(ssps):
-        print("Template {} / {}".format(i+1, ntemp))
-        data = fits.getdata(ssp, 0)
-        newssp = broad2res(wave2, data, 2.51, fwhm_max)[0]
-        newssp, logwave2, velscale = util.log_rebin([wave2[0], wave2[-1]],
-                                                    newssp, velscale=velscale)
-        if i == 0:
-            templates = np.zeros((len(logwave2), ntemp))
-        templates[:,i] = newssp / np.median(newssp)
-
-        # print(templates)
+    outdir = os.path.join(file_dir, "templates")
+    template_file = os.path.join(outdir, "templates_velscale{}.fits".format(int(velscale)))
+    if not os.path.exists(outdir):
+        os.mkdir(outdir)
+    if os.path.exists(template_file) and not redo:
+        templates = fits.getdata(template_file, 0)
+        logwave2 = fits.getdata(template_file, 1)
+        ntemp = templates.shape[1]
+    else:
+        if context.username == "kadu":
+            ssps = glob.glob(os.path.join(file_dir, "ppxf/miles_models/Mun*.fits"))
+        else:
+            ssps = glob.glob(os.path.join(file_dir, "models/Mbi1.30Z*.fits"))
+        ntemp = len(ssps)
+        header = fits.getheader(ssps[0], 0)
+        wave2 = header['CRVAL1'] + np.arange(header['NAXIS1']) * header['CDELT1']
+        for i, ssp in enumerate(ssps):
+            print("Template {} / {}".format(i+1, ntemp))
+            data = fits.getdata(ssp, 0)
+            newssp = broad2res(wave2, data, 2.51, fwhm_max)[0]
+            newssp, logwave2, velscale = util.log_rebin([wave2[0], wave2[-1]],
+                                                        newssp, velscale=velscale)
+            if i == 0:
+                templates = np.zeros((len(logwave2), ntemp))
+            templates[:,i] = newssp / np.median(newssp)
         hdu = fits.PrimaryHDU(templates)
-        hdu.writeto('new_models/new_template{}.fits'.format(i))
-
-
-
+        hdu2 = fits.ImageHDU(logwave2)
+        hdulist = fits.HDUList([hdu, hdu2])
+        hdulist.writeto(template_file, overwrite=True)
+    # Calculating velocity shift between templates and galaxy spectrum
     c = 299792.458
     dv = (logwave2[0] - logwave1[0])*c  # km/s
-
-
-    z = 0.03 # Redshift of the galaxy
+    z = 0.034 # Redshift of the galaxy used for initial guess
 
     # Exclude the emission lines of the gas
     # goodPixels = util.determine_goodpixels(logwave1, wave2, z)
@@ -101,7 +106,7 @@ def test_ppxf(filename, test=True):
     noise = np.ones_like(galaxy)
     pp = ppxf(templates, galaxy, noise, velscale, start,
     	      goodpixels=None, plot=True, moments=4,
-    	      degree=4, vsyst=dv)
+    	      degree=20, vsyst=dv, clean=True)
     # print("Formal errors:")
     # print("     dV    dsigma   dh3      dh4")
     # print("".join("%8.2g" % f for f in pp.error*np.sqrt(pp.chi2)))
