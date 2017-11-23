@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 from ppxf.ppxf import ppxf
 import ppxf.ppxf_util as util
 
+
 import context
 from muse_resolution import get_muse_fwhm, broad2res
 
@@ -62,8 +63,8 @@ def test_ppxf(filename, test=True):
 
     file_dir = os.path.dirname(os.path.realpath(__file__))  # path of this procedure
 
-    ssps = glob.glob(os.path.join(file_dir, "ppxf/miles_models/Mun*.fits"))
-    # ssps = glob.glob(file_dir + '/projeto_ic/models/Mbi1.30Z*.fits')
+    # ssps = glob.glob(os.path.join(file_dir, "ppxf/miles_models/Mun*.fits"))
+    ssps = glob.glob(os.path.join(file_dir, "models/Mbi1.30Z*.fits"))
     if test:
         ssps = ssps[:10]
     ntemp = len(ssps)
@@ -80,6 +81,12 @@ def test_ppxf(filename, test=True):
             templates = np.zeros((len(logwave2), ntemp))
         templates[:,i] = newssp / np.median(newssp)
 
+        # print(templates)
+        hdu = fits.PrimaryHDU(templates)
+        hdu.writeto('new_models/new_template{}.fits'.format(i))
+
+
+
     c = 299792.458
     dv = (logwave2[0] - logwave1[0])*c  # km/s
 
@@ -94,7 +101,7 @@ def test_ppxf(filename, test=True):
     noise = np.ones_like(galaxy)
     pp = ppxf(templates, galaxy, noise, velscale, start,
     	      goodpixels=None, plot=True, moments=4,
-    	      degree=6, vsyst=dv)
+    	      degree=4, vsyst=dv)
     # print("Formal errors:")
     # print("     dV    dsigma   dh3      dh4")
     # print("".join("%8.2g" % f for f in pp.error*np.sqrt(pp.chi2)))
