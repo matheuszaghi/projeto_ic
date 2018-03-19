@@ -28,8 +28,8 @@ def run_ppxf (filename):
     finalList = []
     tempList = []
     
-    for xpix in range(1, 5):
-        for ypix in range(1, 5):
+    for xpix in range(1, 3):
+        for ypix in range(1, 3):
     
             # Picking one spectrum for this test
             specdata = data[:,ypix-1,xpix-1]
@@ -107,6 +107,12 @@ def run_ppxf (filename):
 
             solutionList = ["%.2f" % x for x in pp.sol]
             print(solutionList)
+            #plt.show()
+
+
+            plt.savefig('plot_figures/Plot_Pixel({},{})'.format(xpix,ypix))
+            plt.clf()
+
 
             tempList.append(solutionList)
 
