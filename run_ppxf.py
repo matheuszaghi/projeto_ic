@@ -1,7 +1,8 @@
+# -*- coding: utf-8 -*-
+"""
+Program to run pPXF over a data cube.
 
-
-
-
+"""
 from __future__ import print_function, division
 
 import os
@@ -19,106 +20,105 @@ import ppxf.ppxf_util as util
 import context
 from muse_resolution import get_muse_fwhm, broad2res
 
+def load_templates(velscale, fwhm, redo=False):
+    """ Load templates to be used in the fitting process. """
+    file_dir = os.path.dirname(os.path.realpath(__file__))
+    template_file = os.path.join(file_dir, "templates",
+             "templates_velscale{}_fwhm{}.fits".format(int(velscale), fwhm))
+    if os.path.exists(template_file) and not redo:
+        return template_file
+    # TODO: use the same set of models for both users
+    if context.username == "kadu":
+        ssps = glob.glob(os.path.join(file_dir, "ppxf/miles_models/Mun*.fits"))
+    else:
+        ssps = glob.glob(os.path.join(file_dir, "models/Mbi1.30Z*.fits"))
+    ntemp = len(ssps)
+    header = fits.getheader(ssps[0], 0)
+    wave2 = header['CRVAL1'] + np.arange(header['NAXIS1']) * header['CDELT1']
+    for i, ssp in enumerate(ssps):
+        print("Template {} / {}".format(i + 1, ntemp))
+        data = fits.getdata(ssp, 0)
+        newssp = broad2res(wave2, data, 2.51, fwhm)[0]
+        newssp, logwave2, velscale = util.log_rebin([wave2[0], wave2[-1]],
+                                                    newssp, velscale=velscale)
+        if i == 0:
+            templates = np.zeros((len(logwave2), ntemp))
+        templates[:, i] = newssp / np.median(newssp)
+    hdu = fits.PrimaryHDU(templates)
+    hdu2 = fits.ImageHDU(logwave2)
+    hdulist = fits.HDUList([hdu, hdu2])
+    hdulist.writeto(template_file, overwrite=True)
+    return template_file
 
 def run_ppxf (filename):
-    # Loading data and header from cube
+    """ Run pPXF for all spectra in a given filename. """
+    # Constants to be used in routine if not optional
+    velscale = 30. # km/s
+    c = 299792.458
+    z = 0.034  # Redshift of the galaxy used for initial guess
+    vel = c * np.log(1 + z)
+    start = [vel, 100., 0., 0.]
+    # Setting the FWHM of the fitting
+    f = get_muse_fwhm()
+    fwhm_data = f(np.linspace(4500, 10000, 1000))
+    fwhm_max = np.round(fwhm_data.max() + 0.01) # This will use FWHM=3.0
+    ###########################################################################
+    # Templates are loaded only once, they should not be included in the loop
+    template_file = load_templates(velscale, fwhm_max)
+    templates = fits.getdata(template_file, 0)
+    logwave2 = fits.getdata(template_file, 1)
+    ntemp = templates.shape[1]
+    # Loading data and header from cube 
     data = fits.getdata(filename, 1)
     header = fits.getheader(filename, 1)
-
+    ###########################################################################
+    # How to iterate over complete array using only one loop
+    zdim, ydim, xdim = data.shape
+    pixels = np.array(np.meshgrid(np.arange(xdim)+1,
+                      np.arange(ydim)+1)).reshape((2,-1)).T
+    ###########################################################################
+    # Setting output lists
+    log_dir = os.path.join(context.plots_dir, "ppxf_results")
+    if not os.path.exists(log_dir):
+        os.mkdir(log_dir)
     finalList = []
     tempList = []
-    
-    for xpix in range(1, 3):
-        for ypix in range(1, 3):
-    
-            # Picking one spectrum for this test
-            specdata = data[:,ypix-1,xpix-1]
-            # Wavelenght data
-            wave = (np.arange(header["naxis3"])) * header["cd3_3"] + header["crval3"]
-            f = get_muse_fwhm()
-            fwhm_data = f(wave)
-            fwhm_max = fwhm_data.max() + 0.01
-            print ("Broadening spectra to homogeneize FHWM to {}".format(fwhm_max))
-            specdata = broad2res(wave, specdata, fwhm_data, fwhm_max)[0] # Broad to 2.91 AA
-            # Rebin the data to logarithm scale
-            velscale = 30.
-            galaxy, logwave1, velscale = util.log_rebin([wave[0], wave[-1]], specdata, velscale=velscale)
-            galaxy = galaxy/np.median(galaxy)  # Normalize spectrum to avoid numerical issues (??)
+    for xpix,ypix in pixels:
+        # Picking one spectrum for this test
+        specdata = data[:,ypix-1,xpix-1]
+        # Wavelenght data
+        wave = (np.arange(header["naxis3"])) * header["cd3_3"] + \
+               header["crval3"]
+        print ("Broadening spectra to homogeneize FHWM to {}".format(
+               fwhm_max))
+        specdata = broad2res(wave, specdata, fwhm_data, fwhm_max)[0] # Broad
+        # to 3.0 AA
+        # Rebin the data to logarithm scale
+        galaxy, logwave1, velscale = util.log_rebin([wave[0], wave[-1]],
+                                               specdata, velscale=velscale)
+        galaxy = galaxy/np.median(galaxy)  # Normalize spectrum to avoid numerical issues (??)
+        dv = (logwave2[0] - logwave1[0])*c  # km/s
+        # Exclude the emission lines of the gas
+        wavetemp = np.exp(logwave2)
+        # goodPixels = np.ones_like(galaxy)
+        noise = np.ones_like(galaxy)
+        pp = ppxf(templates, galaxy, noise, velscale, start,
+                  goodpixels=None, plot=True, moments=4,
+                  degree=8, vsyst=dv, clean=True)
+        #print("Formal errors:")
+        #print("     dV    dsigma   dh3      dh4")
+        #print("".join("%8.2g" % f for f in pp.error*np.sqrt(pp.chi2)))
+
+        solutionList = ["%.2f" % x for x in pp.sol]
+        print(solutionList)
+        plt.savefig(os.path.join(log_dir, 'ppxf_x{}_y{}.png'.format(xpix,
+                                                                    ypix)))
+        plt.clf()
 
 
-            #### VERIFCAR ####
-            redo = False
-            file_dir = os.path.dirname(os.path.realpath(__file__))  # path of this procedure
-            outdir = os.path.join(file_dir, "templates")
-            template_file = os.path.join(outdir, "templates_velscale{}.fits".format(int(velscale)))
-            if not os.path.exists(outdir):
-                os.mkdir(outdir)
-            if os.path.exists(template_file) and not redo:
-                templates = fits.getdata(template_file, 0)
-                logwave2 = fits.getdata(template_file, 1)
-                ntemp = templates.shape[1]
-            else:
-                if context.username == "kadu":
-                    ssps = glob.glob(os.path.join(file_dir, "ppxf/miles_models/Mun*.fits"))
-                else:
-                    ssps = glob.glob(os.path.join(file_dir, "models/Mbi1.30Z*.fits"))
-                ntemp = len(ssps)
-                header = fits.getheader(ssps[0], 0)
-                wave2 = header['CRVAL1'] + np.arange(header['NAXIS1']) * header['CDELT1']
-                for i, ssp in enumerate(ssps):
-                    print("Template {} / {}".format(i+1, ntemp))
-                    data = fits.getdata(ssp, 0)
-                    newssp = broad2res(wave2, data, 2.51, fwhm_max)[0]
-                    newssp, logwave2, velscale = util.log_rebin([wave2[0], wave2[-1]],
-                                                                newssp, velscale=velscale)
-                    if i == 0:
-                        templates = np.zeros((len(logwave2), ntemp))
-                    templates[:,i] = newssp / np.median(newssp)
-                hdu = fits.PrimaryHDU(templates)
-                hdu2 = fits.ImageHDU(logwave2)
-                hdulist = fits.HDUList([hdu, hdu2])
-                hdulist.writeto(template_file, overwrite=True)
+        tempList.append(solutionList)
 
-
-            #### VERIFICAR ####
-
-
-
-
-
-            c = 299792.458
-            dv = (logwave2[0] - logwave1[0])*c  # km/s
-            z = 0.034 # Redshift of the galaxy used for initial guess
-
-            # Exclude the emission lines of the gas
-            # goodPixels = util.determine_goodpixels(logwave1, wave2, z)
-            goodPixels = np.ones_like(galaxy)
-            vel = c*np.log(1 + z)
-            start = [vel, 100., 0., 0.]
-            noise = np.ones_like(galaxy)
-            pp = ppxf(templates, galaxy, noise, velscale, start,
-            	      goodpixels=None, plot=True, moments=4,
-            	      degree=20, vsyst=dv, clean=True)
-            
-
-            #print("Formal errors:")
-            #print("     dV    dsigma   dh3      dh4")
-            #print("".join("%8.2g" % f for f in pp.error*np.sqrt(pp.chi2)))
-
-            solutionList = ["%.2f" % x for x in pp.sol]
-            print(solutionList)
-            #plt.show()
-
-
-            plt.savefig('plot_figures/Plot_Pixel({},{})'.format(xpix,ypix))
-            plt.clf()
-
-
-            tempList.append(solutionList)
-
-        finalList.append(tempList)
-        tempList = []
-
+    finalList.append(tempList)
     with open ('resultadosMatia.txt', 'w') as output:
         for x in range(len(finalList)):
             for y in range(len(finalList[x])):
