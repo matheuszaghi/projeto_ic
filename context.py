@@ -20,3 +20,7 @@ if username == "kadu":
     data_dir = os.path.join(home_dir, "data")
     plots_dir = os.path.join(home_dir, "plots")
 #TODO: set correct path to run program in Matheus' PC
+else:
+	home_dir = "/home/{}/Dropbox/matheusic".format(username)
+	data_dir = os.path.join(home_dir, "data")
+	plots_dir = os.path.join(home_dir, "plots")
