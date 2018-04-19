@@ -23,10 +23,13 @@ from muse_resolution import get_muse_fwhm, broad2res
 def load_templates(velscale, fwhm, redo=False):
     """ Load templates to be used in the fitting process. """
     file_dir = os.path.dirname(os.path.realpath(__file__))
-    template_file = os.path.join(file_dir, "templates",
+    template_dir = os.path.join(context.data_dir, "templates")
+    if not os.path.exists(template_dir):
+        os.mkdir(template_dir)
+    output = os.path.join(template_dir,
              "templates_velscale{}_fwhm{}.fits".format(int(velscale), fwhm))
-    if os.path.exists(template_file) and not redo:
-        return template_file
+    if os.path.exists(output) and not redo:
+        return output
     # TODO: use the same set of models for both users
     if context.username == "kadu":
         ssps = glob.glob(os.path.join(file_dir, "ppxf/miles_models/Mun*.fits"))
@@ -47,8 +50,8 @@ def load_templates(velscale, fwhm, redo=False):
     hdu = fits.PrimaryHDU(templates)
     hdu2 = fits.ImageHDU(logwave2)
     hdulist = fits.HDUList([hdu, hdu2])
-    hdulist.writeto(template_file, overwrite=True)
-    return template_file
+    hdulist.writeto(output, overwrite=True)
+    return output
 
 def run_ppxf (filename):
     """ Run pPXF for all spectra in a given filename. """
@@ -77,6 +80,8 @@ def run_ppxf (filename):
     pixels = np.array(np.meshgrid(np.arange(xdim)+1,
                       np.arange(ydim)+1)).reshape((2,-1)).T
     ###########################################################################
+    # Sky lines
+    skylines = np.array([5577])
     # Setting output lists
     log_dir = os.path.join(context.plots_dir, "ppxf_results")
     if not os.path.exists(log_dir):
@@ -84,6 +89,7 @@ def run_ppxf (filename):
     finalList = []
     tempList = []
     for xpix,ypix in pixels:
+        print(xpix, ypix)
         # Picking one spectrum for this test
         specdata = data[:,ypix-1,xpix-1]
         # Wavelenght data
@@ -96,6 +102,16 @@ def run_ppxf (filename):
         # Rebin the data to logarithm scale
         galaxy, logwave1, velscale = util.log_rebin([wave[0], wave[-1]],
                                                specdata, velscale=velscale)
+        lam = np.exp(logwave1)
+        badpixels = []
+        for skyline in skylines:
+            idx1 = np.where(lam < skyline + 15)[0]
+            idx2 = np.where(lam > skyline - 15)[0]
+            idx = np.intersect1d(idx1, idx2)
+            badpixels.append(idx)
+        badpixels = np.unique(np.hstack(badpixels))
+        goodpixels = np.arange(len(lam))
+        goodpixels = np.delete(goodpixels, badpixels)
         galaxy = galaxy/np.median(galaxy)  # Normalize spectrum to avoid numerical issues (??)
         dv = (logwave2[0] - logwave1[0])*c  # km/s
         # Exclude the emission lines of the gas
@@ -103,8 +119,8 @@ def run_ppxf (filename):
         # goodPixels = np.ones_like(galaxy)
         noise = np.ones_like(galaxy)
         pp = ppxf(templates, galaxy, noise, velscale, start,
-                  goodpixels=None, plot=True, moments=4,
-                  degree=8, vsyst=dv, clean=True)
+                  goodpixels=goodpixels, plot=True, moments=4,
+                  degree=8, vsyst=dv, clean=True, lam=lam)
         #print("Formal errors:")
         #print("     dV    dsigma   dh3      dh4")
         #print("".join("%8.2g" % f for f in pp.error*np.sqrt(pp.chi2)))
