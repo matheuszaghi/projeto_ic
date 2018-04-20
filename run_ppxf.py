@@ -103,6 +103,21 @@ def run_ppxf (filename):
         galaxy, logwave1, velscale = util.log_rebin([wave[0], wave[-1]],
                                                specdata, velscale=velscale)
         lam = np.exp(logwave1)
+
+        #####
+        #Transforma comprimento de onda no vácuo para o ar
+        #logwave1 *= np.median(util.vac_to_air(logwave1)/logwave1)
+        #não sei se da pra usar
+        #####
+		
+
+        # Linhas multiplicadas por (z+1):  H_{beta}   O_{3}(2)   O_{3}(3)
+        # Valores emissão: 			    : 5030.2334, 5131.2118, 5180.8089, 
+        # Create emission lines
+
+        #util.emission_lines(logwave2, ?? , fwhm_max)
+
+
         badpixels = []
         for skyline in skylines:
             idx1 = np.where(lam < skyline + 15)[0]
