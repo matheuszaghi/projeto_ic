@@ -113,6 +113,18 @@ def run_ppxf (filename):
         line_wave = np.array([4862.68, 4960.295, 5008.240])
         emission_lines = util.emlines(logwave2, line_wave , fwhm_max)
 
+        #definir
+		lam_range_gal = np.array([np.min(wave), np.max(wave)])/(1 + z)
+		###
+    	gas_templates, gas_names, line_wave = \
+        util.emission_lines(miles.log_lam_temp, lam_range_gal, FWHM_gal)
+
+    	# Combines the stellar and gaseous templates into a single array.
+    	# During the PPXF fit they will be assigned a different kinematic
+    	# COMPONENT value
+   		#
+    	templates = np.column_stack([templates, gas_templates])
+
 
         badpixels = []
         for skyline in skylines:
