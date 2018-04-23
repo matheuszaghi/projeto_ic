@@ -104,26 +104,26 @@ def run_ppxf (filename):
                                                specdata, velscale=velscale)
         lam = np.exp(logwave1)
 
-        
+       
         # Linhas multiplicadas por (z+1):  H_{beta}   O_{3}(2)   O_{3}(3)
-        # Valores emissão: 			    : 5030.2334, 5131.2118, 5180.8089, 
+        # Valores emissão:              : 5030.2334, 5131.2118, 5180.8089, 
 
         # 
         # Create emission lines, H_beta, O3 e O3
-        line_wave = np.array([4862.68, 4960.295, 5008.240])
-        emission_lines = util.emlines(logwave2, line_wave , fwhm_max)
+        #line_wave = np.array([4862.68, 4960.295, 5008.240])
+        #emission_lines = util.emlines(logwave2, line_wave , fwhm_max)
 
         #definir
-		lam_range_gal = np.array([np.min(wave), np.max(wave)])/(1 + z)
-		###
-    	gas_templates, gas_names, line_wave = \
-        util.emission_lines(miles.log_lam_temp, lam_range_gal, FWHM_gal)
+        lam_range_gal = np.array([np.min(logwave2), np.max(logwave2)])/(1 + z)
+        ###
+        gas_templates, gas_names, line_wave = \
+        util.emission_lines(logwave2, lam_range_gal, fwhm_max)
 
-    	# Combines the stellar and gaseous templates into a single array.
-    	# During the PPXF fit they will be assigned a different kinematic
-    	# COMPONENT value
-   		#
-    	templates = np.column_stack([templates, gas_templates])
+        # Combines the stellar and gaseous templates into a single array.
+        # During the PPXF fit they will be assigned a different kinematic
+        # COMPONENT value
+        #
+        templates = np.column_stack([templates, gas_templates])
 
 
         badpixels = []
