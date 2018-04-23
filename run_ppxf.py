@@ -74,6 +74,16 @@ def run_ppxf (filename):
     # Loading data and header from cube 
     data = fits.getdata(filename, 1)
     header = fits.getheader(filename, 1)
+    wave = (np.arange(header["naxis3"])) * header["cd3_3"] + \
+             header["crval3"]
+    # Loading emission line template
+    spec0 = data[:,0,0]
+    logwave = util.log_rebin([wave[0], wave[-1]], spec0, velscale=velscale)[1]
+    lam = np.exp(logwave)
+    gas_templates, gas_names, line_wave = \
+        util.emission_lines(logwave2, [lam[0], lam[-1]], fwhm_max)
+    # Adding emission templates to the stellar templates
+    templates = np.column_stack([templates, gas_templates])
     ###########################################################################
     # How to iterate over complete array using only one loop
     zdim, ydim, xdim = data.shape
@@ -93,8 +103,6 @@ def run_ppxf (filename):
         # Picking one spectrum for this test
         specdata = data[:,ypix-1,xpix-1]
         # Wavelenght data
-        wave = (np.arange(header["naxis3"])) * header["cd3_3"] + \
-               header["crval3"]
         print ("Broadening spectra to homogeneize FHWM to {}".format(
                fwhm_max))
         specdata = broad2res(wave, specdata, fwhm_data, fwhm_max)[0] # Broad
@@ -103,29 +111,6 @@ def run_ppxf (filename):
         galaxy, logwave1, velscale = util.log_rebin([wave[0], wave[-1]],
                                                specdata, velscale=velscale)
         lam = np.exp(logwave1)
-
-       
-        # Linhas multiplicadas por (z+1):  H_{beta}   O_{3}(2)   O_{3}(3)
-        # Valores emissão:              : 5030.2334, 5131.2118, 5180.8089, 
-
-        # 
-        # Create emission lines, H_beta, O3 e O3
-        #line_wave = np.array([4862.68, 4960.295, 5008.240])
-        #emission_lines = util.emlines(logwave2, line_wave , fwhm_max)
-
-        #definir
-        lam_range_gal = np.array([np.min(logwave2), np.max(logwave2)])/(1 + z)
-        ###
-        gas_templates, gas_names, line_wave = \
-        util.emission_lines(logwave2, lam_range_gal, fwhm_max)
-
-        # Combines the stellar and gaseous templates into a single array.
-        # During the PPXF fit they will be assigned a different kinematic
-        # COMPONENT value
-        #
-        templates = np.column_stack([templates, gas_templates])
-
-
         badpixels = []
         for skyline in skylines:
             idx1 = np.where(lam < skyline + 15)[0]
