@@ -104,18 +104,14 @@ def run_ppxf (filename):
                                                specdata, velscale=velscale)
         lam = np.exp(logwave1)
 
-        #####
-        #Transforma comprimento de onda no vácuo para o ar
-        #logwave1 *= np.median(util.vac_to_air(logwave1)/logwave1)
-        #não sei se da pra usar
-        #####
-		
-
+        
         # Linhas multiplicadas por (z+1):  H_{beta}   O_{3}(2)   O_{3}(3)
         # Valores emissão: 			    : 5030.2334, 5131.2118, 5180.8089, 
-        # Create emission lines
 
-        #util.emission_lines(logwave2, ?? , fwhm_max)
+        # 
+        # Create emission lines, H_beta, O3 e O3
+        line_wave = np.array([4862.68, 4960.295, 5008.240])
+        emission_lines = util.emlines(logwave2, line_wave , fwhm_max)
 
 
         badpixels = []
