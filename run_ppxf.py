@@ -62,7 +62,7 @@ def run_ppxf (filename):
     z = 0.034  # Redshift of the galaxy used for initial guess
     vel = c * np.log(1 + z)
     start = [vel, 100., 0., 0.]
-    start = [start, start]
+    #start = [start, start]
     # Setting the FWHM of the fitting
     f = get_muse_fwhm()
     fwhm_data = f(np.linspace(4500, 10000, 1000))
@@ -102,7 +102,7 @@ def run_ppxf (filename):
     tempList = []
     values = []
 
-    for xpix,ypix in [[1, 1],[1, 2],[2, 1],[2, 2]]:
+    for xpix,ypix in pixels:
         print(xpix, ypix)
         # Picking one spectrum for this test
         specdata = data[:,ypix-1,xpix-1]
@@ -151,7 +151,7 @@ def run_ppxf (filename):
 
     #finalList.append(tempList)
 
-    #with open ('resultadosMatia.txt', 'w') as output:
+    #with open ('resultadosMatheus.txt', 'w') as output:
     #    for x in range(len(finalList)):
     #        for y in range(len(finalList[x])):
     #            print(x + 1, y + 1, file=output)
@@ -159,8 +159,9 @@ def run_ppxf (filename):
                 
 
     print(values)
-    t = Table(rows=values, names=('pixels', 'vel', 'sigma', 'h3', 'h4'), meta={'name': 'Resultados_ppxf'})
+    t = Table(rows=values, names=('pixels', 'vel', 'sigma', 'h3', 'h4'))
     print(t)
+    t.write('Resultados_ppxf.fits', format='fits')
 
 if __name__ == "__main__":
     velscale = 30.
