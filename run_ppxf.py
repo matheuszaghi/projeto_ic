@@ -12,6 +12,7 @@ import glob
 from astropy.io import fits
 import numpy as np
 import matplotlib.pyplot as plt
+from astropy.table import Table
 
 from ppxf.ppxf import ppxf
 import ppxf.ppxf_util as util
@@ -61,6 +62,7 @@ def run_ppxf (filename):
     z = 0.034  # Redshift of the galaxy used for initial guess
     vel = c * np.log(1 + z)
     start = [vel, 100., 0., 0.]
+    start = [start, start]
     # Setting the FWHM of the fitting
     f = get_muse_fwhm()
     fwhm_data = f(np.linspace(4500, 10000, 1000))
@@ -96,16 +98,18 @@ def run_ppxf (filename):
     log_dir = os.path.join(context.plots_dir, "ppxf_results")
     if not os.path.exists(log_dir):
         os.mkdir(log_dir)
-    finalList = []
+    #finalList = []
     tempList = []
-    for xpix,ypix in pixels:
+    values = []
+
+    for xpix,ypix in [[1, 1],[1, 2],[2, 1],[2, 2]]:
         print(xpix, ypix)
         # Picking one spectrum for this test
         specdata = data[:,ypix-1,xpix-1]
         # Wavelenght data
-        print ("Broadening spectra to homogeneize FHWM to {}".format(
-               fwhm_max))
-        specdata = broad2res(wave, specdata, fwhm_data, fwhm_max)[0] # Broad
+        #print ("Broadening spectra to homogeneize FHWM to {}".format(
+        #       fwhm_max))
+        #specdata = broad2res(wave, specdata, fwhm_data, fwhm_max)[0] # Broad
         # to 3.0 AA
         # Rebin the data to logarithm scale
         galaxy, logwave1, velscale = util.log_rebin([wave[0], wave[-1]],
@@ -139,18 +143,24 @@ def run_ppxf (filename):
                                                                     ypix)))
         plt.clf()
 
+        tmp = ['x={} y={}'.format(xpix, ypix)]
+        tmp = tmp + solutionList
+        values.append(tuple(tmp))
 
         tempList.append(solutionList)
 
-    finalList.append(tempList)
-    with open ('resultadosMatia.txt', 'w') as output:
-        for x in range(len(finalList)):
-            for y in range(len(finalList[x])):
-                print(x + 1, y + 1, file=output)
-                print(finalList[x][y], file=output)
+    #finalList.append(tempList)
 
+    #with open ('resultadosMatia.txt', 'w') as output:
+    #    for x in range(len(finalList)):
+    #        for y in range(len(finalList[x])):
+    #            print(x + 1, y + 1, file=output)
+    #            print(finalList[x][y], file=output)1
+                
 
-
+    print(values)
+    t = Table(rows=values, names=('pixels', 'vel', 'sigma', 'h3', 'h4'), meta={'name': 'Resultados_ppxf'})
+    print(t)
 
 if __name__ == "__main__":
     velscale = 30.
