@@ -12,7 +12,7 @@ import glob
 from astropy.io import fits
 import numpy as np
 import matplotlib.pyplot as plt
-from astropy.table import Table
+from astropy.table import Table, hstack
 
 from ppxf.ppxf import ppxf
 import ppxf.ppxf_util as util
@@ -62,7 +62,7 @@ def run_ppxf (filename):
     z = 0.034  # Redshift of the galaxy used for initial guess
     vel = c * np.log(1 + z)
     start = [vel, 100., 0., 0.]
-    #start = [start, start]
+    start = [start, start]
     # Setting the FWHM of the fitting
     f = get_muse_fwhm()
     fwhm_data = f(np.linspace(4500, 10000, 1000))
@@ -72,7 +72,7 @@ def run_ppxf (filename):
     template_file = load_templates(velscale, fwhm_max)
     templates = fits.getdata(template_file, 0)
     logwave2 = fits.getdata(template_file, 1)
-    ntemp = templates.shape[1]
+    n_ssps = templates.shape[1]
     # Loading data and header from cube 
     data = fits.getdata(filename, 1)
     header = fits.getheader(filename, 1)
@@ -84,13 +84,18 @@ def run_ppxf (filename):
     lam = np.exp(logwave)
     gas_templates, gas_names, line_wave = \
         util.emission_lines(logwave2, [lam[0], lam[-1]], fwhm_max)
+    n_gas = gas_templates.shape[1]
     # Adding emission templates to the stellar templates
     templates = np.column_stack([templates, gas_templates])
+    # Specifying components
+    components = np.ones(n_ssps + n_gas, dtype=np.int)
+    components[:n_ssps] = 0
     ###########################################################################
     # How to iterate over complete array using only one loop
     zdim, ydim, xdim = data.shape
     pixels = np.array(np.meshgrid(np.arange(xdim)+1,
                       np.arange(ydim)+1)).reshape((2,-1)).T
+    pixels = Table(pixels, names=["x", "y"])
     ###########################################################################
     # Sky lines
     skylines = np.array([5577])
@@ -101,8 +106,8 @@ def run_ppxf (filename):
     #finalList = []
     tempList = []
     values = []
-
-    for xpix,ypix in pixels:
+    sols = []
+    for i, (xpix,ypix) in enumerate(pixels):
         print(xpix, ypix)
         # Picking one spectrum for this test
         specdata = data[:,ypix-1,xpix-1]
@@ -128,40 +133,15 @@ def run_ppxf (filename):
         dv = (logwave2[0] - logwave1[0])*c  # km/s
         # Exclude the emission lines of the gas
         wavetemp = np.exp(logwave2)
-        # goodPixels = np.ones_like(galaxy)
         noise = np.ones_like(galaxy)
         pp = ppxf(templates, galaxy, noise, velscale, start,
                   goodpixels=goodpixels, plot=True, moments=4,
-                  degree=8, vsyst=dv, clean=True, lam=lam)
-        #print("Formal errors:")
-        #print("     dV    dsigma   dh3      dh4")
-        #print("".join("%8.2g" % f for f in pp.error*np.sqrt(pp.chi2)))
-
-        solutionList = ["%.2f" % x for x in pp.sol]
-        print(solutionList)
-        plt.savefig(os.path.join(log_dir, 'ppxf_x{}_y{}.png'.format(xpix,
-                                                                    ypix)))
-        plt.clf()
-
-        tmp = ['x={} y={}'.format(xpix, ypix)]
-        tmp = tmp + solutionList
-        values.append(tuple(tmp))
-
-        tempList.append(solutionList)
-
-    #finalList.append(tempList)
-
-    #with open ('resultadosMatheus.txt', 'w') as output:
-    #    for x in range(len(finalList)):
-    #        for y in range(len(finalList[x])):
-    #            print(x + 1, y + 1, file=output)
-    #            print(finalList[x][y], file=output)1
-                
-
-    print(values)
-    t = Table(rows=values, names=('pixels', 'vel', 'sigma', 'h3', 'h4'))
-    print(t)
-    t.write('Resultados_ppxf.fits', format='fits')
+                  degree=8, vsyst=dv, clean=True, lam=lam,
+                  component=components)
+        sols.append(pp.sol[0]) # Only SSPs
+    sols = Table(np.array(sols), names=['vel', 'sigma', 'h3', 'h4'])
+    table = hstack([pixels, sols])
+    table.write('Resultados_ppxf.fits', format='fits', overwrite=True)
 
 if __name__ == "__main__":
     velscale = 30.
