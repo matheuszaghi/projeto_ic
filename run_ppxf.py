@@ -103,10 +103,10 @@ def run_ppxf (filename):
     log_dir = os.path.join(context.plots_dir, "ppxf_results")
     if not os.path.exists(log_dir):
         os.mkdir(log_dir)
-    #finalList = []
     tempList = []
     values = []
     sols = []
+    sol_gas = []
     for i, (xpix,ypix) in enumerate(pixels):
         print(xpix, ypix)
         # Picking one spectrum for this test
@@ -139,9 +139,19 @@ def run_ppxf (filename):
                   degree=8, vsyst=dv, clean=True, lam=lam,
                   component=components)
         sols.append(pp.sol[0]) # Only SSPs
+        sol_gas.append(pp.sol[1]) #Only gas
+        if i == 1:
+            break
+    #saving gas results in a fits table
+    sol_gas = Table(np.array(sol_gas), names=['vel', 'sigma', 'h3', 'h4'])
+    table_gas = hstack([pixels, sol_gas])
+    table_gas.write('Resultados_gas.fits', format='fits', overwrite=True)
+    #saving ssps results in a fits table
     sols = Table(np.array(sols), names=['vel', 'sigma', 'h3', 'h4'])
     table = hstack([pixels, sols])
-    table.write('Resultados_ppxf.fits', format='fits', overwrite=True)
+    table.write('Resultados_ssps.fits', format='fits', overwrite=True)
+    print(table_gas)
+    print(table)
 
 if __name__ == "__main__":
     velscale = 30.
