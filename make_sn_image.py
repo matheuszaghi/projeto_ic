@@ -21,23 +21,26 @@ def make_sn_image():
     """ Put short description here. """
     cubo = os.path.join(context.data_dir, "cube_10x10.fits")
     flux = fits.getdata(cubo, 1)
-    header = fits.getheader(cubo, 1)
-    wave = (np.arange(header["naxis3"])) * header["cd3_3"] + \
-             header["crval3"]
 
-    #print(flux)
-    #print(flux.shape)
-    
+    #criando vetor 2d
     snr = []
+    for i in range(10):
+        snr.append([])
+        for j in range(10):
+            snr[i].append(0)
 
+
+
+    #as dimensoes do cubo estao na forma (z,y,x)
     #loop da variavel y
     for j in range(0,10):
-    	#loop da variavel x
+        #loop da variavel x
         for i in range(0,10):
-        	snr.append(DER_SNR(flux[:, j, i])) #calculo do sinal-ruido
+            snr[i][j] = DER_SNR(flux[:, j, i]) #calculo do sinal-ruido
 
-    print(snr)
-    
+    #salvando imagem fits
+    final_image = fits.PrimaryHDU(snr)
+    final_image.writeto('Image_SN.fits', overwrite=True)
 
     
 if __name__ == "__main__":
