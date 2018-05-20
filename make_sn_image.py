@@ -19,7 +19,7 @@ from der_snr import DER_SNR
 
 def make_sn_image():
     """ Put short description here. """
-    cubo = os.path.join(context.data_dir, "cube_10x10.fits")
+    cubo = os.path.join(context.data_dir, "ADP.2017-06-16T13_59_19.244.fits")
     flux = fits.getdata(cubo, 1)
     ############################################################################
     # Solução proposta
@@ -89,4 +89,7 @@ def collapse_cube(cubename, outfile, redo=False):
 
     
 if __name__ == "__main__":
-    make_sn_image()
+    #make_sn_image()
+    filename = os.path.join(context.data_dir, "ADP.2017-06-16T13_59_19.244.fits")
+    output = 'SinalRuido.fits'
+    collapse_cube(filename, output)
