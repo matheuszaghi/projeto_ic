@@ -137,26 +137,36 @@ def run_ppxf (filename):
 
         #-------------------------
 
-        #print(lam)
-        #index = np.where(np.isnan(components))
-        #print(index)
-        #indexx = np.where(np.isinf(components))
-        #print(indexx)
-        #indexxx = np.where(np.isneginf(components))
+        print(len(lam))
+        print(lam)
+
+        print(len(components))
+        print(components)
 
 
+        index = np.where(np.isnan(components))
+        indexx = np.where(np.isinf(components))
+        indexxx = np.where(np.isneginf(components))
         
+        iindex = np.where(np.isnan(lam))
+        iindexx = np.where(np.isinf(lam))
+        iindexxx = np.where(np.isneginf(lam))
 
-        #print(len(components))
-        #print(components)
+        lam = np.delete(lam, iindex)
+        lam = np.delete(lam, iindexx)
+        lam = np.delete(lam, iindexxx)
+
+        print(len(lam))
+        print(lam)
+
+        components = np.delete(components, index)
+        components = np.delete(components, indexx)
+        components = np.delete(components, indexxx)
 
 
-        #components = np.delete(components, index)
-        #components = np.delete(components, indexx)
-        #components = np.delete(components, indexxx)
+        print(len(components))
+        print(components)
 
-        #print(len(components))
-        #print(components)
 
         #--------------------------
 
