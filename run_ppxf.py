@@ -32,10 +32,14 @@ def load_templates(velscale, fwhm, redo=False):
     if os.path.exists(output) and not redo:
         return output
     # TODO: use the same set of models for both users
-    if context.username == "kadu":
-        ssps = glob.glob(os.path.join(file_dir, "ppxf/miles_models/Mun*.fits"))
-    else:
-        ssps = glob.glob(os.path.join(file_dir, "models/Mbi1.30Z*.fits"))
+
+    #if context.username == "kadu":
+    #    ssps = glob.glob(os.path.join(file_dir, "ppxf/miles_models/Mun*.fits"))
+    #else:
+    #    ssps = glob.glob(os.path.join(file_dir, "models/Mbi1.30Z*.fits"))
+
+    ssps = glob.glob(os.path.join(file_dir, "ppxf/miles_models/Mun*.fits")) 
+
     ntemp = len(ssps)
     header = fits.getheader(ssps[0], 0)
     wave2 = header['CRVAL1'] + np.arange(header['NAXIS1']) * header['CDELT1']
@@ -103,18 +107,27 @@ def run_ppxf (filename):
     log_dir = os.path.join(context.plots_dir, "ppxf_results")
     if not os.path.exists(log_dir):
         os.mkdir(log_dir)
+    test_dir = os.path.join(context.plots_dir, "ppxf_values")
+    if not os.path.exists(test_dir):
+        os.mkdir(test_dir)
     tempList = []
     values = []
     sols = []
     sol_gas = []
+    tmpssps = []
+    tmpgas = []
     for i, (xpix,ypix) in enumerate(pixels):
         print(xpix, ypix)
+        output = os.path.join(test_dir, 'gas_ppxf_x{}_y{}.fits'.format(xpix, ypix))
+        if os.path.exists(output):
+            print('Already calculated values...')
+            continue
         # Picking one spectrum for this test
         specdata = data[:,ypix-1,xpix-1]
         # Wavelenght data
-        #print ("Broadening spectra to homogeneize FHWM to {}".format(
-        #       fwhm_max))
-        #specdata = broad2res(wave, specdata, fwhm_data, fwhm_max)[0] # Broad
+        print ("Broadening spectra to homogeneize FHWM to {}".format(
+               fwhm_max))
+        specdata = broad2res(wave, specdata, fwhm_data, fwhm_max)[0] # Broad
         # to 3.0 AA
         # Rebin the data to logarithm scale
         galaxy, logwave1, velscale = util.log_rebin([wave[0], wave[-1]],
@@ -138,22 +151,31 @@ def run_ppxf (filename):
                   goodpixels=goodpixels, plot=True, moments=4,
                   degree=8, vsyst=dv, clean=True, lam=lam,
                   component=components)
+
+        tmpssps = Table(pp.sol[0])
+        tmpgas = Table(pp.sol[1])
+        tmpssps.write(os.path.join(test_dir, 'ssps_ppxf_x{}_y{}.fits'.format(xpix, ypix)))
+        tmpgas.write(os.path.join(test_dir, 'gas_ppxf_x{}_y{}.fits'.format(xpix, ypix)))
+
         sols.append(pp.sol[0]) # Only SSPs
         sol_gas.append(pp.sol[1]) #Only gas
+
+        plt.savefig(os.path.join(log_dir, 'ppxf_x{}_y{}.png'.format(xpix, ypix)))
+        plt.clf()
         if i == 1:
             break
     #saving gas results in a fits table
     sol_gas = Table(np.array(sol_gas), names=['vel', 'sigma', 'h3', 'h4'])
     table_gas = hstack([pixels, sol_gas])
-    table_gas.write('Resultados_gas.fits', format='fits', overwrite=True)
+    table_gas.write('Resultados/Resultados_gas.fits', format='fits', overwrite=True)
     #saving ssps results in a fits table
     sols = Table(np.array(sols), names=['vel', 'sigma', 'h3', 'h4'])
     table = hstack([pixels, sols])
-    table.write('Resultados_ssps.fits', format='fits', overwrite=True)
+    table.write('Resultados/Resultados_ssps.fits', format='fits', overwrite=True)
     print(table_gas)
     print(table)
 
 if __name__ == "__main__":
     velscale = 30.
-    filename = os.path.join(context.data_dir, "cube_10x10.fits")
+    filename = os.path.join(context.data_dir, "cube_85x85.fits")
     run_ppxf(filename)
