@@ -31,12 +31,6 @@ def load_templates(velscale, fwhm, redo=False):
              "templates_velscale{}_fwhm{}.fits".format(int(velscale), fwhm))
     if os.path.exists(output) and not redo:
         return output
-    # TODO: use the same set of models for both users
-
-    #if context.username == "kadu":
-    #    ssps = glob.glob(os.path.join(file_dir, "ppxf/miles_models/Mun*.fits"))
-    #else:
-    #    ssps = glob.glob(os.path.join(file_dir, "models/Mbi1.30Z*.fits"))
 
     ssps = glob.glob(os.path.join(file_dir, "ppxf/miles_models/Mun*.fits")) 
 
@@ -140,8 +134,35 @@ def run_ppxf (filename):
             idx = np.intersect1d(idx1, idx2)
             badpixels.append(idx)
         badpixels = np.unique(np.hstack(badpixels))
+
+        #-------------------------
+
+        #print(lam)
+        #index = np.where(np.isnan(components))
+        #print(index)
+        #indexx = np.where(np.isinf(components))
+        #print(indexx)
+        #indexxx = np.where(np.isneginf(components))
+
+
+        
+
+        #print(len(components))
+        #print(components)
+
+
+        #components = np.delete(components, index)
+        #components = np.delete(components, indexx)
+        #components = np.delete(components, indexxx)
+
+        #print(len(components))
+        #print(components)
+
+        #--------------------------
+
         goodpixels = np.arange(len(lam))
         goodpixels = np.delete(goodpixels, badpixels)
+
         galaxy = galaxy/np.median(galaxy)  # Normalize spectrum to avoid numerical issues (??)
         dv = (logwave2[0] - logwave1[0])*c  # km/s
         # Exclude the emission lines of the gas
@@ -162,8 +183,7 @@ def run_ppxf (filename):
 
         plt.savefig(os.path.join(log_dir, 'ppxf_x{}_y{}.png'.format(xpix, ypix)))
         plt.clf()
-        if i == 1:
-            break
+
     #saving gas results in a fits table
     sol_gas = Table(np.array(sol_gas), names=['vel', 'sigma', 'h3', 'h4'])
     table_gas = hstack([pixels, sol_gas])
