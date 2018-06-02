@@ -114,7 +114,7 @@ def run_ppxf (filename):
         print(xpix, ypix)
         output = os.path.join(test_dir, 'gas_ppxf_x{}_y{}.fits'.format(xpix, ypix))
         if os.path.exists(output):
-            print('Already calculated values...')
+            print('Already calculated values for x={}, y{}'.format(xpix, ypix))
             continue
         # Picking one spectrum for this test
         specdata = data[:,ypix-1,xpix-1]
@@ -152,7 +152,6 @@ def run_ppxf (filename):
         goodpixels = np.delete(goodpixels, index_galaxy_nan)
         goodpixels = np.delete(goodpixels, index_galaxy_inf)
         goodpixels = np.delete(goodpixels, index_galaxy_ninf)
-
 
         galaxy = galaxy/np.median(galaxy)  # Normalize spectrum to avoid numerical issues (??)
         dv = (logwave2[0] - logwave1[0])*c  # km/s
