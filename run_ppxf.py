@@ -138,16 +138,17 @@ def run_ppxf (filename):
         goodpixels = np.arange(len(galaxy))
         goodpixels = np.delete(goodpixels, badpixels)
 
+        #selecting non finite numbers
         index_galaxy_nan = np.where(np.isnan(galaxy))
         index_galaxy_inf = np.where(np.isinf(galaxy))
         index_galaxy_ninf = np.where(np.isneginf(galaxy))
 
-
+        #setting nans to zero
         galaxy[np.isnan(galaxy)] = 0
         galaxy[np.isinf(galaxy)] = 0
         galaxy[np.isneginf(galaxy)] = 0
         
-
+        #nans cant be used in goodpixels
         goodpixels = np.delete(goodpixels, index_galaxy_nan)
         goodpixels = np.delete(goodpixels, index_galaxy_inf)
         goodpixels = np.delete(goodpixels, index_galaxy_ninf)
