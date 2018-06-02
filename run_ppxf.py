@@ -114,7 +114,7 @@ def run_ppxf (filename):
         print(xpix, ypix)
         output = os.path.join(test_dir, 'gas_ppxf_x{}_y{}.fits'.format(xpix, ypix))
         if os.path.exists(output):
-            print('Already calculated values...')
+            print('Already calculated values for x={}, y{}'.format(xpix, ypix))
             continue
         # Picking one spectrum for this test
         specdata = data[:,ypix-1,xpix-1]
@@ -135,43 +135,23 @@ def run_ppxf (filename):
             badpixels.append(idx)
         badpixels = np.unique(np.hstack(badpixels))
 
-        #-------------------------
-
-        print(len(lam))
-        print(lam)
-
-        print(len(components))
-        print(components)
-
-
-        index_components_nan = np.where(np.isnan(components))
-        index_components_inf = np.where(np.isinf(components))
-        index_components_ninf = np.where(np.isneginf(components))
-        
-        index_lam_nan = np.where(np.isnan(lam))
-        index_lam_inf = np.where(np.isinf(lam))
-        index_lam_ninf = np.where(np.isneginf(lam))
-
-        lam = np.delete(lam, index_lam_nan)
-        lam = np.delete(lam, index_lam_inf)
-        lam = np.delete(lam, index_lam_ninf)
-
-        print(len(lam))
-        print(lam)
-
-        components = np.delete(components, index_components_nan)
-        components = np.delete(components, index_components_inf)
-        components = np.delete(components, index_components_ninf)
-
-
-        print(len(components))
-        print(components)
-
-
-        #--------------------------
-
-        goodpixels = np.arange(len(lam))
+        goodpixels = np.arange(len(galaxy))
         goodpixels = np.delete(goodpixels, badpixels)
+
+        #selecting non finite numbers
+        index_galaxy_nan = np.where(np.isnan(galaxy))
+        index_galaxy_inf = np.where(np.isinf(galaxy))
+        index_galaxy_ninf = np.where(np.isneginf(galaxy))
+
+        #setting nans to zero
+        galaxy[np.isnan(galaxy)] = 0
+        galaxy[np.isinf(galaxy)] = 0
+        galaxy[np.isneginf(galaxy)] = 0
+        
+        #nans cant be used in goodpixels
+        goodpixels = np.delete(goodpixels, index_galaxy_nan)
+        goodpixels = np.delete(goodpixels, index_galaxy_inf)
+        goodpixels = np.delete(goodpixels, index_galaxy_ninf)
 
         galaxy = galaxy/np.median(galaxy)  # Normalize spectrum to avoid numerical issues (??)
         dv = (logwave2[0] - logwave1[0])*c  # km/s
