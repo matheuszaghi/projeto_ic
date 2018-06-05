@@ -163,27 +163,36 @@ def run_ppxf (filename):
                   degree=8, vsyst=dv, clean=True, lam=lam,
                   component=components)
 
+        
+
+        #tmpssps = Table(np.array(pp.sol[0]), names=['vel', 'sigma', 'h3', 'h4'])
+        #tmpgas = Table(np.array(pp.sol[1]), names=['vel', 'sigma', 'h3', 'h4'])
+
         tmpssps = Table(pp.sol[0])
         tmpgas = Table(pp.sol[1])
         tmpssps.write(os.path.join(test_dir, 'ssps_ppxf_x{}_y{}.fits'.format(xpix, ypix)))
         tmpgas.write(os.path.join(test_dir, 'gas_ppxf_x{}_y{}.fits'.format(xpix, ypix)))
 
-        sols.append(pp.sol[0]) # Only SSPs
-        sol_gas.append(pp.sol[1]) #Only gas
 
         plt.savefig(os.path.join(log_dir, 'ppxf_x{}_y{}.png'.format(xpix, ypix)))
         plt.clf()
+
+        sols.append(pp.sol[0]) # Only SSPs
+        sol_gas.append(pp.sol[1]) #Only gas
+
+    #saving ssps results in a fits table
+    sols = Table(np.array(sols), names=['vel', 'sigma', 'h3', 'h4'])
+    table = hstack([pixels, sols])
+    table.write('Resultados/Resultados_ssps.fits', format='fits', overwrite=True)
 
     #saving gas results in a fits table
     sol_gas = Table(np.array(sol_gas), names=['vel', 'sigma', 'h3', 'h4'])
     table_gas = hstack([pixels, sol_gas])
     table_gas.write('Resultados/Resultados_gas.fits', format='fits', overwrite=True)
-    #saving ssps results in a fits table
-    sols = Table(np.array(sols), names=['vel', 'sigma', 'h3', 'h4'])
-    table = hstack([pixels, sols])
-    table.write('Resultados/Resultados_ssps.fits', format='fits', overwrite=True)
-    print(table_gas)
+
     print(table)
+    print(table_gas)
+
 
 if __name__ == "__main__":
     velscale = 30.
