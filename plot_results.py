@@ -38,7 +38,7 @@ for xpix in range(1, 85):
 
         print(xpix, ypix)
 
-        image[xpix][ypix] = evt_data['col0'][0]
+        image[ypix][xpix] = evt_data['col0'][0]
 
 
 vmin, vmax = 9999999999, 0
@@ -52,7 +52,7 @@ for i in range(2, len(image[0])):
 print(vmin)
 print(vmax)
 
-plt.imshow(image, cmap='gist_earth', vmin=vmin, vmax=vmax)
+plt.imshow(image, cmap='gist_earth', vmin=vmin, vmax=vmax, origin="bottom")
 
 plt.colorbar()
 plt.show()
