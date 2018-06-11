@@ -52,7 +52,7 @@ def load_templates(velscale, fwhm, redo=False):
     hdulist.writeto(output, overwrite=True)
     return output
 
-def run_ppxf (filename):
+def run_ppxf (filename, redo=False):
     """ Run pPXF for all spectra in a given filename. """
     # Constants to be used in routine if not optional
     velscale = 30. # km/s
@@ -113,7 +113,7 @@ def run_ppxf (filename):
     for i, (xpix,ypix) in enumerate(pixels):
         print(xpix, ypix)
         output = os.path.join(test_dir, 'gas_ppxf_x{}_y{}.fits'.format(xpix, ypix))
-        if os.path.exists(output):
+        if os.path.exists(output) and not redo:
             print('Already calculated values for x={}, y{}'.format(xpix, ypix))
             continue
         # Picking one spectrum for this test
@@ -196,5 +196,5 @@ def run_ppxf (filename):
 
 if __name__ == "__main__":
     velscale = 30.
-    filename = os.path.join(context.data_dir, "cube_85x85.fits")
+    filename = os.path.join(context.data_dir, "cube_16arcsec.fits")
     run_ppxf(filename)

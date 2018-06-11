@@ -12,24 +12,18 @@ from mpdaf.obj import Cube
 
 import context
 
-def test_slicing():
+def test_slicing(filename, size=10, ext=1):
     """ Test slicing of the cube with MPDAF. """
-    cubename = os.path.join(context.data_dir,
-                            "ADP.2017-06-16T13:59:19.244.fits")
-
-    print(os.path.exists(cubename))
-    cube = Cube(cubename, ext=1)
-
+    cube = Cube(cubename, ext=ext)
     center = (7.02162, 229.186)
     lbda = (cube.wave.get_range()[0], 5900)
-
-    #gera um cubo 10x10 pixeis para teste do ppxf
-   
-    cube = cube.subcube(center, 2, lbda)
-
-    newcubename = os.path.join(context.data_dir, "cube_10x10.fits")
+    cube = cube.subcube(center, size, lbda)
+    newcubename = os.path.join(context.data_dir, "cube_{0}arcsec.fits".format(
+        size))
     cube.write(newcubename)
     return
 
 if __name__ == "__main__":
-    test_slicing()
+    cubename = os.path.join(context.data_dir,
+                            "ADP.2017-06-16T13:59:19.244.fits")
+    test_slicing(cubename, size=16)

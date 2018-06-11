@@ -8,20 +8,12 @@ from __future__ import print_function, division
 
 import os 
 
-import glob
 from astropy.io import fits
 import numpy as np
 import matplotlib.pyplot as plt
-from astropy.table import Table, hstack
-
-from ppxf.ppxf import ppxf
-import ppxf.ppxf_util as util
-
+from astropy.table import Table
 
 import context
-from muse_resolution import get_muse_fwhm, broad2res
-
-import pickle
 
 image_vel = np.zeros((85, 85))
 image_sigma = np.zeros((85, 85))
@@ -33,7 +25,8 @@ image_h4 = np.zeros((85, 85))
 for xpix in range(1, 85):
     for ypix in range(1, 85):
 
-        filename = os.path.join(context.plots_dir, "ppxf_values/ssps_ppxf_x{}_y{}.fits".format(xpix, ypix))
+        filename = os.path.join(context.data_dir, "ppxf_values/ssps_ppxf_x{}_y{"
+                                               "}.fits".format(xpix, ypix))
 
         hdu_list = fits.open(filename, memmap=True)
 	
