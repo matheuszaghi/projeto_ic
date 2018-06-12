@@ -54,7 +54,7 @@ def read_results(redo=False):
         hdu.writeto(out, overwrite=True)
     return [vel, sigma, h3, h4]
 
-def make_maps(moments):
+def make_maps(moments, img):
     """ Produces the plots. """
     lims = [[10140, 10160], [210, 320], [-0.05, 0.05], [-0.04, 0.08]]
     labels = ["$\Delta V$ (km/s)", "$\sigma$ (km/s)", "$h_3$", "$h_4$"]
@@ -62,6 +62,8 @@ def make_maps(moments):
     meanV = np.mean(lims[0])
     moments[0] -= meanV
     lims[0] = [lims[0][0] - meanV, lims[0][1] - meanV]
+    levels = np.array([50, 75, 96, 121, 146, 172, 197, 222, 248, 273,
+                       324, 375])
     for i, mom in enumerate(moments):
         out = os.path.join(context.plots_dir, "{}.png".format(names[i]))
         fig = plt.figure(i+1, figsize=(5,4))
@@ -72,6 +74,7 @@ def make_maps(moments):
                    cmap="Spectral_r", vmin=lims[i][0], vmax=lims[i][1])
         ax.set_xlabel("X (pixel)")
         ax.set_ylabel("Y (pixel)")
+        ax.contour(img, colors="k", levels=levels, linewidths=1.2)
         cbar = plt.colorbar(im)
         cbar.set_label(labels[i])
         plt.subplots_adjust(left=0.1, bottom=0.1, top=0.98, right=0.96)
@@ -81,4 +84,5 @@ def make_maps(moments):
 
 if __name__ == "__main__":
     results = read_results()
-    make_maps(results)
+    img = fits.getdata(os.path.join(context.data_dir, "img85x85.fits"))
+    make_maps(results, img)
